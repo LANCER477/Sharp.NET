@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO; // Додано для роботи з файлами
 using System.Linq;
 using System.Threading;
 
@@ -8,7 +9,7 @@ namespace SharpKnP321.AsyncProgramming
 {
     internal class AsyncProgramming
     {
-        // --- Поля для прикладу з інфляцією (з оригінального коду) ---
+        // --- Поля для прикладу з інфляцією ---
         private double sum;
         private int threadCnt;
         private readonly object sumLocker = new();
@@ -24,7 +25,7 @@ namespace SharpKnP321.AsyncProgramming
             ConsoleKeyInfo keyInfo;
             do
             {
-                Console.Clear(); // Трохи очистимо консоль для зручності
+                Console.Clear();
                 Console.WriteLine("Async Programming: select an action");
                 Console.WriteLine("1. Processes list");
                 Console.WriteLine("2. Start notepad (Control Demo)");
@@ -32,8 +33,9 @@ namespace SharpKnP321.AsyncProgramming
                 Console.WriteLine("4. Thread demo");
                 Console.WriteLine("5. Multi Thread demo (Inflation)");
                 Console.WriteLine("----------------------------------");
-                Console.WriteLine("6. HW: Process Launchers (Notepad, Browser, Calc)");
+                Console.WriteLine("6. HW: Process Launchers (Simple)");
                 Console.WriteLine("7. HW: MultiThread Random Numbers");
+                Console.WriteLine("8. HW: Launchers WITH ARGUMENTS (New)"); // <--- НОВЕ ДЗ
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("0. Exit program");
 
@@ -48,9 +50,9 @@ namespace SharpKnP321.AsyncProgramming
                     case '3': ProcessWithParam(); PressAnyKey(); break;
                     case '4': ThreadsDemo(); PressAnyKey(); break;
                     case '5': MultiThread(); PressAnyKey(); break;
-                    // Нові пункти Д.З.
                     case '6': HomeworkProcessLaunchers(); PressAnyKey(); break;
                     case '7': HomeworkRandomThreads(); PressAnyKey(); break;
+                    case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break; // <--- Виклик нового методу
                     default: Console.WriteLine("Wrong choice"); PressAnyKey(); break;
                 }
             } while (true);
@@ -62,11 +64,126 @@ namespace SharpKnP321.AsyncProgramming
             Console.ReadKey();
         }
 
-        #region HW: Process Launchers
-        /* Д.З. Реалізувати запуск процесів 
-         * - блокнот 
-         * - браузер (* з пошуком наявного) 
-         * - калькулятор */
+        #region HW: Launchers WITH ARGUMENTS (New Task)
+        /* Д.З. Реалізувати запуск процесів з передачею до них аргументів
+         * - блокнот з відкриттям заданого файлу
+         * - браузер з відкриттям заданої адреси (та пошуком наявного)
+         * - музичний або відеопрогравач з заданим ресурсом */
+        private void HomeworkLaunchWithArgs()
+        {
+            Console.WriteLine("\n--- Homework: Launch With Arguments ---");
+            Console.WriteLine("1. Notepad (Open specific file)");
+            Console.WriteLine("2. Browser (Open specific search query)");
+            Console.WriteLine("3. Media Player (Open specific file)");
+            Console.Write("Select action: ");
+
+            var key = Console.ReadKey().KeyChar;
+            Console.WriteLine("\n");
+
+            try
+            {
+                switch (key)
+                {
+                    case '1':
+                       
+                        string fileName = "homework_args.txt";
+                        string fullPath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+
+                        
+                        if (!File.Exists(fullPath))
+                        {
+                            File.WriteAllText(fullPath, "Цей файл було створено автоматично та відкрито через аргументи процесу.");
+                            Console.WriteLine($"[Created] File {fileName} created.");
+                        }
+
+                        Console.WriteLine($"Launching Notepad with argument: {fileName}");
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "notepad.exe",
+                            Arguments = fullPath, 
+                            UseShellExecute = true
+                        });
+                        break;
+
+                    case '2':
+                       
+                        string searchQuery = "C# Process Start Arguments";
+                        
+                        string targetUrl = $"https://www.google.com/search?q={searchQuery.Replace(" ", "+")}";
+
+                       
+                        var browsers = Process.GetProcessesByName("chrome")
+                            .Concat(Process.GetProcessesByName("msedge"))
+                            .Concat(Process.GetProcessesByName("firefox")).ToArray();
+
+                        if (browsers.Length > 0)
+                        {
+                            Console.WriteLine($"[Info] Found {browsers.Length} browser processes running.");
+                            Console.WriteLine($"Attaching to existing instance context implies opening a new tab.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("[Info] No browser found. Starting new instance.");
+                        }
+
+                        Console.WriteLine($"Opening URL: {targetUrl}");
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = targetUrl,
+                            UseShellExecute = true 
+                        });
+                        break;
+
+                    case '3':
+                        // 3. Медіаплеєр + ресурс
+                        Console.WriteLine("Enter full path to a music/video file (or press Enter to launch Windows Media Player empty):");
+                        Console.Write("> ");
+                        string mediaPath = Console.ReadLine()?.Trim('"'); 
+
+                        string playerExecutable = "wmplayer.exe"; 
+
+                        if (string.IsNullOrWhiteSpace(mediaPath))
+                        {
+                            Console.WriteLine("No path provided. Launching empty player.");
+                            Process.Start(playerExecutable);
+                        }
+                        else
+                        {
+                            if (File.Exists(mediaPath))
+                            {
+                                Console.WriteLine($"Launching {playerExecutable} with file: {mediaPath}");
+                                Process.Start(new ProcessStartInfo
+                                {
+                                    FileName = playerExecutable,
+                                    Arguments = $"\"{mediaPath}\"", 
+                                    UseShellExecute = true
+                                });
+                            }
+                            else
+                            {
+                                Console.WriteLine("File not found! Launching player anyway.");
+                                Process.Start(playerExecutable);
+                            }
+                        }
+                        break;
+
+                    default:
+                        Console.WriteLine("Unknown selection.");
+                        break;
+                }
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                Console.WriteLine("Error: Could not find the specified application (e.g., wmplayer.exe might not be installed).");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General Error: {ex.Message}");
+            }
+        }
+        #endregion
+
+        #region HW: Process Launchers (Previous HW)
         private void HomeworkProcessLaunchers()
         {
             Console.WriteLine("\n--- Homework: Launch Applications ---");
@@ -86,9 +203,7 @@ namespace SharpKnP321.AsyncProgramming
                         Process.Start("notepad.exe");
                         Console.WriteLine("Notepad launched.");
                         break;
-
                     case '2':
-                        // Перевірка наявних процесів браузера
                         var chromeProcs = Process.GetProcessesByName("chrome");
                         var edgeProcs = Process.GetProcessesByName("msedge");
                         int totalBrowsers = chromeProcs.Length + edgeProcs.Length;
@@ -98,20 +213,16 @@ namespace SharpKnP321.AsyncProgramming
                         else
                             Console.WriteLine("[Info] No active browser found. Starting new...");
 
-                        // Запуск URL
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "https://www.google.com",
-                            UseShellExecute = true // Важливо для .NET Core/5+ щоб відкрити URL
+                            UseShellExecute = true
                         });
                         break;
-
                     case '3':
-                        // Калькулятор (calc.exe працює як shim для UWP калькулятора)
                         Process.Start("calc.exe");
                         Console.WriteLine("Calculator launched.");
                         break;
-
                     default:
                         Console.WriteLine("Unknown app selection.");
                         break;
@@ -124,24 +235,17 @@ namespace SharpKnP321.AsyncProgramming
         }
         #endregion
 
-        #region HW: Random Numbers Collection
-        /* Д.З. Колекція випадкових чисел.
-         * Користувач вводить кількість -> запуск потоків -> збір у колекцію -> вивід проміжних результатів.
-         * Останній потік виводить фінал. */
+        #region HW: Random Numbers Collection (Previous HW)
         private void HomeworkRandomThreads()
         {
             Console.Write("\nEnter count of numbers to generate: ");
             if (int.TryParse(Console.ReadLine(), out int count) && count > 0)
             {
-                // Ініціалізація змінних
                 randomNumbers = new List<int>();
                 randomThreadCount = count;
-
                 Console.WriteLine("Starting threads...");
-
                 for (int i = 0; i < count; i++)
                 {
-                    // Запускаємо потоки
                     new Thread(RandomNumberWorker).Start();
                 }
             }
@@ -153,31 +257,20 @@ namespace SharpKnP321.AsyncProgramming
 
         private void RandomNumberWorker()
         {
-           
             var rnd = new Random();
-            int delay = rnd.Next(500, 2000); // 0.5 - 2 сек
+            int delay = rnd.Next(500, 2000);
             Thread.Sleep(delay);
-
-            int number = rnd.Next(10, 100); // саме число
-
+            int number = rnd.Next(10, 100);
             bool isLast = false;
 
-            // Критична секція для запису в список та зміни лічильника
             lock (randomLocker)
             {
                 randomNumbers.Add(number);
                 randomThreadCount--;
-
-                // Вивід поточного стану колекції
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} added {number}. List: [{string.Join(", ", randomNumbers)}]");
-
-                if (randomThreadCount == 0)
-                {
-                    isLast = true;
-                }
+                if (randomThreadCount == 0) isLast = true;
             }
 
-            
             if (isLast)
             {
                 Console.WriteLine("\n--------------------------------");
@@ -188,7 +281,6 @@ namespace SharpKnP321.AsyncProgramming
         #endregion
 
         #region Original Code (Inflation & Demos)
-
         private void MultiThread()
         {
             sum = 100.0;
@@ -203,29 +295,17 @@ namespace SharpKnP321.AsyncProgramming
         private void CalcMonth(Object? month)
         {
             int m = (int)month!;
-            // Console.WriteLine($"Request sent for month {m}");
-            Thread.Sleep(1000);   // імітація АРІ-запиту
+            Thread.Sleep(1000);
             double percent = m;
             double k = (1.0 + percent / 100.0);
-
-            double tempSum;
-            lock (sumLocker)
-            {
-                sum *= k;
-                tempSum = sum;
-            }
-            // Console.WriteLine($"Response got for month {m}. Current Sum ~ {tempSum:F2}");
-
+            lock (sumLocker) sum *= k;
             bool isLast;
             lock (cntLocker)
             {
                 threadCnt -= 1;
                 isLast = threadCnt == 0;
             }
-            if (isLast)
-            {
-                Console.WriteLine($"Inflation Result for year: {sum:F2}");
-            }
+            if (isLast) Console.WriteLine($"Inflation Result for year: {sum:F2}");
         }
 
         private void ThreadsDemo()
@@ -248,31 +328,22 @@ namespace SharpKnP321.AsyncProgramming
             try
             {
                 string filePath = Path.Combine(Directory.GetCurrentDirectory(), "demo.txt");
-                if (!File.Exists(filePath))
-                {
-                    File.WriteAllText(filePath, "Hello Async World!");
-                }
-
+                if (!File.Exists(filePath)) File.WriteAllText(filePath, "Hello Async World!");
                 var p = Process.Start(new ProcessStartInfo
                 {
                     FileName = "notepad.exe",
                     Arguments = filePath,
                     UseShellExecute = true
                 });
-
                 Console.WriteLine("Notepad with params started. Press any key to kill it...");
                 Console.ReadKey();
-
                 if (p != null && !p.HasExited)
                 {
                     p.CloseMainWindow();
                     p.Kill();
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
         }
 
         private void ProcessControlDemo()
@@ -281,10 +352,8 @@ namespace SharpKnP321.AsyncProgramming
             {
                 Console.WriteLine("Starting Notepad...");
                 Process process = Process.Start("notepad.exe");
-
                 Console.WriteLine("Press any key to close Notepad...");
                 Console.ReadKey();
-
                 if (!process.HasExited)
                 {
                     process.CloseMainWindow();
@@ -294,10 +363,7 @@ namespace SharpKnP321.AsyncProgramming
                     Console.WriteLine("Notepad closed.");
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
         }
 
         private void ProcessesDemo()
@@ -306,16 +372,9 @@ namespace SharpKnP321.AsyncProgramming
             Dictionary<String, int> proc = new Dictionary<string, int>();
             foreach (var process in processes)
             {
-                if (proc.ContainsKey(process.ProcessName))
-                {
-                    proc[process.ProcessName]++;
-                }
-                else
-                {
-                    proc[process.ProcessName] = 1;
-                }
+                if (proc.ContainsKey(process.ProcessName)) proc[process.ProcessName]++;
+                else proc[process.ProcessName] = 1;
             }
-
             Console.WriteLine("Top 10 Processes by count:");
             foreach (var pair in proc.OrderByDescending(p => p.Value).ThenBy(p => p.Key).Take(10))
             {
