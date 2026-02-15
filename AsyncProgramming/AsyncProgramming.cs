@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO; // Додано для роботи з файлами
+using System.IO;
 using System.Linq;
 using System.Threading;
 
@@ -17,7 +17,6 @@ namespace SharpKnP321.AsyncProgramming
 
         // --- Поля для Д.З. (Випадкові числа) ---
         private List<int> randomNumbers = new();
-        private int randomThreadCount;
         private readonly object randomLocker = new();
 
         public void Run()
@@ -34,8 +33,8 @@ namespace SharpKnP321.AsyncProgramming
                 Console.WriteLine("5. Multi Thread demo (Inflation)");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("6. HW: Process Launchers (Simple)");
-                Console.WriteLine("7. HW: MultiThread Random Numbers");
-                Console.WriteLine("8. HW: Launchers WITH ARGUMENTS (New)"); // <--- НОВЕ ДЗ
+                Console.WriteLine("7. HW: MultiThread Random Numbers (With Join)");
+                Console.WriteLine("8. HW: Launchers WITH ARGUMENTS");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("0. Exit program");
 
@@ -52,7 +51,7 @@ namespace SharpKnP321.AsyncProgramming
                     case '5': MultiThread(); PressAnyKey(); break;
                     case '6': HomeworkProcessLaunchers(); PressAnyKey(); break;
                     case '7': HomeworkRandomThreads(); PressAnyKey(); break;
-                    case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break; // <--- Виклик нового методу
+                    case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break;
                     default: Console.WriteLine("Wrong choice"); PressAnyKey(); break;
                 }
             } while (true);
@@ -64,11 +63,11 @@ namespace SharpKnP321.AsyncProgramming
             Console.ReadKey();
         }
 
-        #region HW: Launchers WITH ARGUMENTS (New Task)
+        #region HW: Launchers WITH ARGUMENTS
         /* Д.З. Реалізувати запуск процесів з передачею до них аргументів
          * - блокнот з відкриттям заданого файлу
-         * - браузер з відкриттям заданої адреси (та пошуком наявного)
-         * - музичний або відеопрогравач з заданим ресурсом */
+         * - браузер з відкриттям заданої адреси
+         * - медіаплеєр з заданим ресурсом */
         private void HomeworkLaunchWithArgs()
         {
             Console.WriteLine("\n--- Homework: Launch With Arguments ---");
@@ -85,11 +84,9 @@ namespace SharpKnP321.AsyncProgramming
                 switch (key)
                 {
                     case '1':
-                       
                         string fileName = "homework_args.txt";
                         string fullPath = Path.Combine(Directory.GetCurrentDirectory(), fileName);
 
-                        
                         if (!File.Exists(fullPath))
                         {
                             File.WriteAllText(fullPath, "Цей файл було створено автоматично та відкрито через аргументи процесу.");
@@ -100,51 +97,41 @@ namespace SharpKnP321.AsyncProgramming
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "notepad.exe",
-                            Arguments = fullPath, 
+                            Arguments = fullPath,
                             UseShellExecute = true
                         });
                         break;
 
                     case '2':
-                       
                         string searchQuery = "C# Process Start Arguments";
-                        
                         string targetUrl = $"https://www.google.com/search?q={searchQuery.Replace(" ", "+")}";
 
-                       
                         var browsers = Process.GetProcessesByName("chrome")
                             .Concat(Process.GetProcessesByName("msedge"))
                             .Concat(Process.GetProcessesByName("firefox")).ToArray();
 
                         if (browsers.Length > 0)
-                        {
                             Console.WriteLine($"[Info] Found {browsers.Length} browser processes running.");
-                            Console.WriteLine($"Attaching to existing instance context implies opening a new tab.");
-                        }
                         else
-                        {
                             Console.WriteLine("[Info] No browser found. Starting new instance.");
-                        }
 
                         Console.WriteLine($"Opening URL: {targetUrl}");
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = targetUrl,
-                            UseShellExecute = true 
+                            UseShellExecute = true
                         });
                         break;
 
                     case '3':
-                        // 3. Медіаплеєр + ресурс
-                        Console.WriteLine("Enter full path to a music/video file (or press Enter to launch Windows Media Player empty):");
+                        Console.WriteLine("Enter full path to a music/video file (or press Enter for empty):");
                         Console.Write("> ");
-                        string mediaPath = Console.ReadLine()?.Trim('"'); 
+                        string mediaPath = Console.ReadLine()?.Trim('"');
 
-                        string playerExecutable = "wmplayer.exe"; 
+                        string playerExecutable = "wmplayer.exe";
 
                         if (string.IsNullOrWhiteSpace(mediaPath))
                         {
-                            Console.WriteLine("No path provided. Launching empty player.");
                             Process.Start(playerExecutable);
                         }
                         else
@@ -155,7 +142,7 @@ namespace SharpKnP321.AsyncProgramming
                                 Process.Start(new ProcessStartInfo
                                 {
                                     FileName = playerExecutable,
-                                    Arguments = $"\"{mediaPath}\"", 
+                                    Arguments = $"\"{mediaPath}\"",
                                     UseShellExecute = true
                                 });
                             }
@@ -172,18 +159,14 @@ namespace SharpKnP321.AsyncProgramming
                         break;
                 }
             }
-            catch (System.ComponentModel.Win32Exception)
-            {
-                Console.WriteLine("Error: Could not find the specified application (e.g., wmplayer.exe might not be installed).");
-            }
             catch (Exception ex)
             {
-                Console.WriteLine($"General Error: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
         #endregion
 
-        #region HW: Process Launchers (Previous HW)
+        #region HW: Process Launchers (Simple)
         private void HomeworkProcessLaunchers()
         {
             Console.WriteLine("\n--- Homework: Launch Applications ---");
@@ -204,15 +187,6 @@ namespace SharpKnP321.AsyncProgramming
                         Console.WriteLine("Notepad launched.");
                         break;
                     case '2':
-                        var chromeProcs = Process.GetProcessesByName("chrome");
-                        var edgeProcs = Process.GetProcessesByName("msedge");
-                        int totalBrowsers = chromeProcs.Length + edgeProcs.Length;
-
-                        if (totalBrowsers > 0)
-                            Console.WriteLine($"[Info] Found {totalBrowsers} running browser processes.");
-                        else
-                            Console.WriteLine("[Info] No active browser found. Starting new...");
-
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = "https://www.google.com",
@@ -235,19 +209,39 @@ namespace SharpKnP321.AsyncProgramming
         }
         #endregion
 
-        #region HW: Random Numbers Collection (Previous HW)
+        #region HW: Random Numbers Collection (Modified with Join)
+        /* Д.З. Модифікація:
+         * - Синхронізація з головним потоком через очікування (Join).
+         * - Підсумковий результат виводиться у головному потоці. */
         private void HomeworkRandomThreads()
         {
             Console.Write("\nEnter count of numbers to generate: ");
             if (int.TryParse(Console.ReadLine(), out int count) && count > 0)
             {
                 randomNumbers = new List<int>();
-                randomThreadCount = count;
+                // Список для збереження посилань на потоки
+                List<Thread> threads = new List<Thread>();
+
                 Console.WriteLine("Starting threads...");
+
                 for (int i = 0; i < count; i++)
                 {
-                    new Thread(RandomNumberWorker).Start();
+                    var t = new Thread(RandomNumberWorker);
+                    threads.Add(t); // Зберігаємо потік
+                    t.Start();      // Запускаємо
                 }
+
+                // ГОЛОВНИЙ ПОТІК ЧЕКАЄ ЗАВЕРШЕННЯ ВСІХ
+                foreach (var t in threads)
+                {
+                    t.Join();
+                }
+
+                // Вивід результату в головному потоці
+                Console.WriteLine("\n--------------------------------");
+                Console.WriteLine("All threads finished. Main thread reporting:");
+                Console.WriteLine($"FINAL RESULT: [{string.Join(", ", randomNumbers)}]");
+                Console.WriteLine("--------------------------------");
             }
             else
             {
@@ -259,23 +253,14 @@ namespace SharpKnP321.AsyncProgramming
         {
             var rnd = new Random();
             int delay = rnd.Next(500, 2000);
-            Thread.Sleep(delay);
+            Thread.Sleep(delay); // Імітація роботи
+
             int number = rnd.Next(10, 100);
-            bool isLast = false;
 
             lock (randomLocker)
             {
                 randomNumbers.Add(number);
-                randomThreadCount--;
                 Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} added {number}. List: [{string.Join(", ", randomNumbers)}]");
-                if (randomThreadCount == 0) isLast = true;
-            }
-
-            if (isLast)
-            {
-                Console.WriteLine("\n--------------------------------");
-                Console.WriteLine($"FINAL RESULT: [{string.Join(", ", randomNumbers)}]");
-                Console.WriteLine("--------------------------------");
             }
         }
         #endregion
