@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SharpKnP321.AsyncProgramming
 {
@@ -19,6 +20,10 @@ namespace SharpKnP321.AsyncProgramming
         private List<int> randomNumbers = new();
         private readonly object randomLocker = new();
 
+        // Поля для Task Д.З.
+        private int taskActiveCount;
+        private readonly object taskCntLocker = new();
+
         public void Run()
         {
             ConsoleKeyInfo keyInfo;
@@ -32,9 +37,11 @@ namespace SharpKnP321.AsyncProgramming
                 Console.WriteLine("4. Thread demo");
                 Console.WriteLine("5. Multi Thread demo (Inflation)");
                 Console.WriteLine("----------------------------------");
-                Console.WriteLine("6. HW: Process Launchers (Simple)");
+                Console.WriteLine("6. HW: Process Launchers");
                 Console.WriteLine("7. HW: MultiThread Random Numbers (With Join)");
                 Console.WriteLine("8. HW: Launchers WITH ARGUMENTS");
+                Console.WriteLine("----------------------------------");
+                Console.WriteLine("9. HW: Tasks Random Numbers (Task TPL)");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("0. Exit program");
 
@@ -52,6 +59,7 @@ namespace SharpKnP321.AsyncProgramming
                     case '6': HomeworkProcessLaunchers(); PressAnyKey(); break;
                     case '7': HomeworkRandomThreads(); PressAnyKey(); break;
                     case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break;
+                    case '9': HomeworkRandomTasks(); PressAnyKey(); break;
                     default: Console.WriteLine("Wrong choice"); PressAnyKey(); break;
                 }
             } while (true);
@@ -62,6 +70,69 @@ namespace SharpKnP321.AsyncProgramming
             Console.WriteLine("\nPress any key to return to menu...");
             Console.ReadKey();
         }
+
+        #region HW: Tasks Random Numbers (Task TPL)
+        /* Д.З. Повторити реалізацію попереднього ДЗ у формалізмі задач (Task)
+         * Реалізувати формування колекції випадкових чисел.
+         * Задача, що виконується останнім, виводить сформовану колекцію на екран. 
+         */
+        private void HomeworkRandomTasks()
+        {
+            Console.WriteLine("\n--- Homework: Random Numbers via Tasks ---");
+            Console.Write("Enter count of numbers to generate: ");
+
+            if (int.TryParse(Console.ReadLine(), out int count) && count > 0)
+            {
+                randomNumbers = new List<int>();
+                taskActiveCount = count;
+
+                Console.WriteLine("Starting Tasks...");
+
+                for (int i = 0; i < count; i++)
+                {
+                    Task.Run(RandomTaskWorker);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid input.");
+            }
+        }
+
+        private void RandomTaskWorker()
+        {
+            var rnd = new Random();
+            int delay = rnd.Next(500, 2000);
+            Thread.Sleep(delay);
+
+            int number = rnd.Next(10, 100);
+            bool isLast = false;
+
+            lock (randomLocker)
+            {
+                randomNumbers.Add(number);
+                Console.WriteLine($"Task {Task.CurrentId} added {number}. List: [{string.Join(", ", randomNumbers)}]");
+            }
+
+            lock (taskCntLocker)
+            {
+                taskActiveCount--;
+                if (taskActiveCount == 0)
+                {
+                    isLast = true;
+                }
+            }
+
+            if (isLast)
+            {
+                Console.WriteLine("\n--------------------------------");
+                Console.WriteLine("Last Task Reporting:");
+                Console.WriteLine($"FINAL RESULT: [{string.Join(", ", randomNumbers)}]");
+                Console.WriteLine("--------------------------------");
+                Console.WriteLine("Press any key to refresh menu...");
+            }
+        }
+        #endregion
 
         #region HW: Launchers WITH ARGUMENTS
         /* Д.З. Реалізувати запуск процесів з передачею до них аргументів
@@ -103,7 +174,7 @@ namespace SharpKnP321.AsyncProgramming
                         break;
 
                     case '2':
-                        string searchQuery = "C# Process Start Arguments";
+                        string searchQuery = "C# Task Parallel Library";
                         string targetUrl = $"https://www.google.com/search?q={searchQuery.Replace(" ", "+")}";
 
                         var browsers = Process.GetProcessesByName("chrome")
@@ -166,7 +237,11 @@ namespace SharpKnP321.AsyncProgramming
         }
         #endregion
 
-        #region HW: Process Launchers (Simple)
+        #region HW: Process Launchers
+        /* Д.З. Реалізувати запуск процесів 
+         * - блокнот 
+         * - браузер (* з пошуком наявного) 
+         * - калькулятор */
         private void HomeworkProcessLaunchers()
         {
             Console.WriteLine("\n--- Homework: Launch Applications ---");
@@ -209,35 +284,32 @@ namespace SharpKnP321.AsyncProgramming
         }
         #endregion
 
-        #region HW: Random Numbers Collection (Modified with Join)
-        /* Д.З. Модифікація:
-         * - Синхронізація з головним потоком через очікування (Join).
-         * - Підсумковий результат виводиться у головному потоці. */
+        #region HW: Random Numbers Collection (Thread with Join)
+        /* Д.З. Модифікувати попереднє ДЗ (з формуванням масиву)
+         * на синхронізацію з головним потоком через очікування:
+         * підсумковий результат виводиться у головному потоці. */
         private void HomeworkRandomThreads()
         {
             Console.Write("\nEnter count of numbers to generate: ");
             if (int.TryParse(Console.ReadLine(), out int count) && count > 0)
             {
                 randomNumbers = new List<int>();
-                // Список для збереження посилань на потоки
                 List<Thread> threads = new List<Thread>();
 
                 Console.WriteLine("Starting threads...");
 
                 for (int i = 0; i < count; i++)
                 {
-                    var t = new Thread(RandomNumberWorker);
-                    threads.Add(t); // Зберігаємо потік
-                    t.Start();      // Запускаємо
+                    var t = new Thread(RandomNumberThreadWorker);
+                    threads.Add(t);
+                    t.Start();
                 }
 
-                // ГОЛОВНИЙ ПОТІК ЧЕКАЄ ЗАВЕРШЕННЯ ВСІХ
                 foreach (var t in threads)
                 {
                     t.Join();
                 }
 
-                // Вивід результату в головному потоці
                 Console.WriteLine("\n--------------------------------");
                 Console.WriteLine("All threads finished. Main thread reporting:");
                 Console.WriteLine($"FINAL RESULT: [{string.Join(", ", randomNumbers)}]");
@@ -249,11 +321,11 @@ namespace SharpKnP321.AsyncProgramming
             }
         }
 
-        private void RandomNumberWorker()
+        private void RandomNumberThreadWorker()
         {
             var rnd = new Random();
             int delay = rnd.Next(500, 2000);
-            Thread.Sleep(delay); // Імітація роботи
+            Thread.Sleep(delay);
 
             int number = rnd.Next(10, 100);
 
@@ -265,7 +337,7 @@ namespace SharpKnP321.AsyncProgramming
         }
         #endregion
 
-        #region Original Code (Inflation & Demos)
+        #region Original Code
         private void MultiThread()
         {
             sum = 100.0;
@@ -367,7 +439,5 @@ namespace SharpKnP321.AsyncProgramming
             }
         }
         #endregion
-        //1212
-
     }
 }
