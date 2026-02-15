@@ -10,7 +10,7 @@ namespace SharpKnP321.AsyncProgramming
 {
     internal class AsyncProgramming
     {
-        // --- Поля для прикладу з інфляцією ---
+        // --- Поля для прикладу з інфляцією (з оригінального коду) ---
         private double sum;
         private int threadCnt;
         private readonly object sumLocker = new();
@@ -42,6 +42,7 @@ namespace SharpKnP321.AsyncProgramming
                 Console.WriteLine("8. HW: Launchers WITH ARGUMENTS");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("9. HW: Tasks Random Numbers (Task TPL)");
+                Console.WriteLine("a. HW: Async/Await Random Numbers");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("0. Exit program");
 
@@ -60,6 +61,7 @@ namespace SharpKnP321.AsyncProgramming
                     case '7': HomeworkRandomThreads(); PressAnyKey(); break;
                     case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break;
                     case '9': HomeworkRandomTasks(); PressAnyKey(); break;
+                    case 'a': HomeworkAsyncAwaitLaunch(); PressAnyKey(); break;
                     default: Console.WriteLine("Wrong choice"); PressAnyKey(); break;
                 }
             } while (true);
@@ -71,11 +73,66 @@ namespace SharpKnP321.AsyncProgramming
             Console.ReadKey();
         }
 
+        #region HW: Async/Await Random Numbers
+        /* Д.З. Реалізувати попереднє ДЗ (формування масиву)
+         * за допомогою async-await синтаксису. */
+
+        private void HomeworkAsyncAwaitLaunch()
+        {
+            HomeworkRandomAsync().Wait();
+        }
+
+        private async Task HomeworkRandomAsync()
+        {
+            Console.WriteLine("\n--- Homework: Async/Await Numbers ---");
+            Console.Write("Enter count of numbers to generate: ");
+
+            if (int.TryParse(Console.ReadLine(), out int count) && count > 0)
+            {
+                randomNumbers = new List<int>();
+                var tasks = new List<Task>();
+
+                Console.WriteLine("Starting Async Tasks...");
+
+                for (int i = 0; i < count; i++)
+                {
+                    tasks.Add(RandomAsyncWorker());
+                }
+
+                await Task.WhenAll(tasks);
+
+                Console.WriteLine("\n--------------------------------");
+                Console.WriteLine("All async tasks finished.");
+                Console.WriteLine($"FINAL RESULT: [{string.Join(", ", randomNumbers)}]");
+                Console.WriteLine("--------------------------------");
+            }
+            else
+            {
+                Console.WriteLine("Invalid input.");
+            }
+        }
+
+        private async Task RandomAsyncWorker()
+        {
+            var rnd = new Random();
+            int delay = rnd.Next(500, 2000);
+
+            await Task.Delay(delay);
+
+            int number = rnd.Next(10, 100);
+
+            lock (randomLocker)
+            {
+                randomNumbers.Add(number);
+                Console.WriteLine($"Async Task {Task.CurrentId} added {number}. List: [{string.Join(", ", randomNumbers)}]");
+            }
+        }
+        #endregion
+
         #region HW: Tasks Random Numbers (Task TPL)
         /* Д.З. Повторити реалізацію попереднього ДЗ у формалізмі задач (Task)
          * Реалізувати формування колекції випадкових чисел.
-         * Задача, що виконується останнім, виводить сформовану колекцію на екран. 
-         */
+         * Задача, що виконується останнім, виводить сформовану колекцію на екран. */
         private void HomeworkRandomTasks()
         {
             Console.WriteLine("\n--- Homework: Random Numbers via Tasks ---");
