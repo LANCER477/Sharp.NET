@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +11,7 @@ namespace SharpKnP321.AsyncProgramming
 {
     internal class AsyncProgramming
     {
-        // --- Поля для прикладу з інфляцією (з оригінального коду) ---
+        // --- Поля для прикладу з інфляцією ---
         private double sum;
         private int threadCnt;
         private readonly object sumLocker = new();
@@ -43,6 +44,7 @@ namespace SharpKnP321.AsyncProgramming
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("9. HW: Tasks Random Numbers (Task TPL)");
                 Console.WriteLine("a. HW: Async/Await Random Numbers");
+                Console.WriteLine("b. HW: String Tasks Chain (ContinueWith)");
                 Console.WriteLine("----------------------------------");
                 Console.WriteLine("0. Exit program");
 
@@ -62,6 +64,7 @@ namespace SharpKnP321.AsyncProgramming
                     case '8': HomeworkLaunchWithArgs(); PressAnyKey(); break;
                     case '9': HomeworkRandomTasks(); PressAnyKey(); break;
                     case 'a': HomeworkAsyncAwaitLaunch(); PressAnyKey(); break;
+                    case 'b': HomeworkStringChain(); PressAnyKey(); break;
                     default: Console.WriteLine("Wrong choice"); PressAnyKey(); break;
                 }
             } while (true);
@@ -73,10 +76,95 @@ namespace SharpKnP321.AsyncProgramming
             Console.ReadKey();
         }
 
-        #region HW: Async/Await Random Numbers
-        /* Д.З. Реалізувати попереднє ДЗ (формування масиву)
-         * за допомогою async-await синтаксису. */
+        #region HW: String Tasks Chain (ContinueWith)
+        /* Д.З. Доповнити перелік методів оброблення рядків, включити ці методи до ланцюга викликів (ContinueWith)
+         * - інвертувати кожне слово (змінити порядок літер на зворотній)
+         * - застосувати шифр Цезаря (кожна літера змінюється на таку, що йде на 3 позиції далі за абеткою)
+         * - приховування: залишаємо перший та останній символи, решту замінюємо на "*" (символ заміни - параметр методу)
+         * якщо слово коротше за 3 літери, то зміни не вносяться */
+        private void HomeworkStringChain()
+        {
+            Console.WriteLine("\n--- Homework: String Processing Chain ---");
+            Console.WriteLine("Enter a sentence to process:");
+            string input = Console.ReadLine();
 
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                input = "Hello world from Async Programming";
+                Console.WriteLine($"Empty input. Using default: \"{input}\"");
+            }
+
+            Console.WriteLine("\nStarting Task Chain...");
+
+            Task<string> task1 = Task.Run(() =>
+            {
+                string result = InvertWords(input);
+                Console.WriteLine($"[Task 1 - Invert]: {result}");
+                return result;
+            });
+
+            Task<string> task2 = task1.ContinueWith(prevTask =>
+            {
+                string result = CaesarCipher(prevTask.Result, 3);
+                Console.WriteLine($"[Task 2 - Caesar]: {result}");
+                return result;
+            });
+
+            Task<string> task3 = task2.ContinueWith(prevTask =>
+            {
+                string result = HideCharacters(prevTask.Result, '*');
+                Console.WriteLine($"[Task 3 - Hide]  : {result}");
+                return result;
+            });
+
+            task3.Wait();
+
+            Console.WriteLine("\nChain finished.");
+        }
+
+        private string InvertWords(string text)
+        {
+            var words = text.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                char[] charArray = words[i].ToCharArray();
+                Array.Reverse(charArray);
+                words[i] = new string(charArray);
+            }
+            return string.Join(" ", words);
+        }
+
+        private string CaesarCipher(string text, int shift)
+        {
+            char[] buffer = text.ToCharArray();
+            for (int i = 0; i < buffer.Length; i++)
+            {
+                char letter = buffer[i];
+                if (char.IsLetter(letter))
+                {
+                    char offset = char.IsUpper(letter) ? 'A' : 'a';
+                    buffer[i] = (char)((letter + shift - offset) % 26 + offset);
+                }
+            }
+            return new string(buffer);
+        }
+
+        private string HideCharacters(string text, char hideSymbol)
+        {
+            var words = text.Split(' ');
+            for (int i = 0; i < words.Length; i++)
+            {
+                string w = words[i];
+                if (w.Length >= 3)
+                {
+                    words[i] = w[0] + new string(hideSymbol, w.Length - 2) + w[w.Length - 1];
+                }
+            }
+            return string.Join(" ", words);
+        }
+        #endregion
+
+        #region HW: Async/Await Random Numbers
         private void HomeworkAsyncAwaitLaunch()
         {
             HomeworkRandomAsync().Wait();
@@ -130,9 +218,6 @@ namespace SharpKnP321.AsyncProgramming
         #endregion
 
         #region HW: Tasks Random Numbers (Task TPL)
-        /* Д.З. Повторити реалізацію попереднього ДЗ у формалізмі задач (Task)
-         * Реалізувати формування колекції випадкових чисел.
-         * Задача, що виконується останнім, виводить сформовану колекцію на екран. */
         private void HomeworkRandomTasks()
         {
             Console.WriteLine("\n--- Homework: Random Numbers via Tasks ---");
@@ -192,10 +277,6 @@ namespace SharpKnP321.AsyncProgramming
         #endregion
 
         #region HW: Launchers WITH ARGUMENTS
-        /* Д.З. Реалізувати запуск процесів з передачею до них аргументів
-         * - блокнот з відкриттям заданого файлу
-         * - браузер з відкриттям заданої адреси
-         * - медіаплеєр з заданим ресурсом */
         private void HomeworkLaunchWithArgs()
         {
             Console.WriteLine("\n--- Homework: Launch With Arguments ---");
@@ -295,10 +376,6 @@ namespace SharpKnP321.AsyncProgramming
         #endregion
 
         #region HW: Process Launchers
-        /* Д.З. Реалізувати запуск процесів 
-         * - блокнот 
-         * - браузер (* з пошуком наявного) 
-         * - калькулятор */
         private void HomeworkProcessLaunchers()
         {
             Console.WriteLine("\n--- Homework: Launch Applications ---");
@@ -342,9 +419,6 @@ namespace SharpKnP321.AsyncProgramming
         #endregion
 
         #region HW: Random Numbers Collection (Thread with Join)
-        /* Д.З. Модифікувати попереднє ДЗ (з формуванням масиву)
-         * на синхронізацію з головним потоком через очікування:
-         * підсумковий результат виводиться у головному потоці. */
         private void HomeworkRandomThreads()
         {
             Console.Write("\nEnter count of numbers to generate: ");
