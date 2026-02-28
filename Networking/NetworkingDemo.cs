@@ -25,8 +25,7 @@ namespace SharpKnP321.Networking
             MoonPhase tomorrowPhase = moonApi.PhaseByDateAsync(new DateOnly(2026, 2, 24)).Result;
             Console.WriteLine("{0} {1}", tomorrowPhase.PhaseName, tomorrowPhase.Lighting);
 
-            // Д.З. Реалізувати відображення даних про фазу місяця на задану дату
-            // Дату вводити з клавіатури на запит користувача.
+
             Console.Write("Введіть дату (у форматі ДД.ММ.РРРР): ");
             string inputDate = Console.ReadLine();
 
@@ -43,16 +42,20 @@ namespace SharpKnP321.Networking
 
         public async Task RunNbuHomeworkXmlAsync()
         {
-            Console.Write("Введіть дату (у форматі ДД.ММ.РРРР): ");
+            Console.WriteLine("\n--- ДЗ: Курси валют НБУ (XML) ---");
+            Console.Write("Введіть дату (у форматі ДД.ММ.РРРР, наприклад 24.02.2022): ");
             string inputDate = Console.ReadLine();
+
 
             if (DateTime.TryParseExact(inputDate, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
             {
-                if (parsedDate > DateTime.Today)
+
+                if (parsedDate >= DateTime.Today)
                 {
-                    Console.WriteLine("Помилка: Дата не може бути в майбутньому!");
+                    Console.WriteLine("Помилка: Дата має належати минулому!");
                     return;
                 }
+
 
                 string formattedDate = parsedDate.ToString("yyyyMMdd");
                 string apiUrl = $"https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date={formattedDate}";
@@ -60,7 +63,9 @@ namespace SharpKnP321.Networking
                 try
                 {
                     using HttpClient client = new();
+                    Console.WriteLine("Завантаження XML з НБУ...");
                     string xmlString = await client.GetStringAsync(apiUrl);
+
 
                     XDocument xmlDocument = XDocument.Parse(xmlString);
 
@@ -79,11 +84,14 @@ namespace SharpKnP321.Networking
                     if (rates.Count > 0)
                     {
                         Console.WriteLine($"\nКурс НБУ на {parsedDate:dd.MM.yyyy}:");
+                        Console.WriteLine("-------------------------------------------------");
+
                         var popularCodes = new[] { "USD", "EUR", "GBP", "PLN" };
                         foreach (var rate in rates.Where(r => popularCodes.Contains(r.Cc)))
                         {
-                            Console.WriteLine($"{rate.Cc} ({rate.Txt}): {rate.Rate} грн");
+                            Console.WriteLine($"{rate.Cc} ({rate.Txt}): \t{rate.Rate} грн");
                         }
+                        Console.WriteLine("-------------------------------------------------");
                     }
                     else
                     {
