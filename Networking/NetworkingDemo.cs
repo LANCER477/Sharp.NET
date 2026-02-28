@@ -2,7 +2,10 @@
 using SharpKnP321.Networking.Orm;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -19,11 +22,132 @@ namespace SharpKnP321.Networking
             MoonPhase todayPhase = moonApi.TodayPhaseAsync().Result;
             Console.WriteLine("{0} {1}", todayPhase.PhaseName, todayPhase.Lighting);
 
-            MoonPhase tomorrowPhase = moonApi.PhaseByDateAsync(new DateOnly(2026,2,24)).Result;
+            MoonPhase tomorrowPhase = moonApi.PhaseByDateAsync(new DateOnly(2026, 2, 24)).Result;
             Console.WriteLine("{0} {1}", tomorrowPhase.PhaseName, tomorrowPhase.Lighting);
+
             // Д.З. Реалізувати відображення даних про фазу місяця на задану дату
             // Дату вводити з клавіатури на запит користувача.
-         }
+            Console.Write("Введіть дату (у форматі ДД.ММ.РРРР): ");
+            string inputDate = Console.ReadLine();
+
+            if (DateOnly.TryParseExact(inputDate, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly userDate))
+            {
+                MoonPhase userPhase = await moonApi.PhaseByDateAsync(userDate);
+                Console.WriteLine($"Фаза на {userDate}: {userPhase.PhaseName}, Освітлення: {userPhase.Lighting}");
+            }
+            else
+            {
+                Console.WriteLine("Помилка: Невірний формат дати.");
+            }
+        }
+
+        public async Task RunNbuHomeworkXmlAsync()
+        {
+            Console.Write("Введіть дату (у форматі ДД.ММ.РРРР): ");
+            string inputDate = Console.ReadLine();
+
+            if (DateTime.TryParseExact(inputDate, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedDate))
+            {
+                if (parsedDate > DateTime.Today)
+                {
+                    Console.WriteLine("Помилка: Дата не може бути в майбутньому!");
+                    return;
+                }
+
+                string formattedDate = parsedDate.ToString("yyyyMMdd");
+                string apiUrl = $"https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?date={formattedDate}";
+
+                try
+                {
+                    using HttpClient client = new();
+                    string xmlString = await client.GetStringAsync(apiUrl);
+
+                    XDocument xmlDocument = XDocument.Parse(xmlString);
+
+                    List<NbuRate> rates = [..
+                        xmlDocument
+                        .Descendants("currency")
+                        .Select(c => new NbuRate
+                        {
+                            Txt = c.Element("txt")!.Value,
+                            Rate = Convert.ToDouble(c.Element("rate")!.Value, CultureInfo.InvariantCulture),
+                            Cc = c.Element("cc")!.Value,
+                            R030 = Convert.ToInt32(c.Element("r030")!.Value),
+                        })
+                    ];
+
+                    if (rates.Count > 0)
+                    {
+                        Console.WriteLine($"\nКурс НБУ на {parsedDate:dd.MM.yyyy}:");
+                        var popularCodes = new[] { "USD", "EUR", "GBP", "PLN" };
+                        foreach (var rate in rates.Where(r => popularCodes.Contains(r.Cc)))
+                        {
+                            Console.WriteLine($"{rate.Cc} ({rate.Txt}): {rate.Rate} грн");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("НБУ не повернув даних на цю дату.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Помилка: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Помилка: Невірний формат дати.");
+            }
+        }
+
+        public async Task RunHtmlDownloaderAsync()
+        {
+            Console.Write("Введіть адресу сайту (наприклад, google.com): ");
+            string url = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                url = "https://" + url;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка відкриття браузера: {ex.Message}");
+            }
+
+            try
+            {
+                using HttpClient client = new();
+                string htmlCode = await client.GetStringAsync(url);
+
+                Console.WriteLine("\n================ HTML CODE ================");
+                if (htmlCode.Length > 1500)
+                {
+                    Console.WriteLine(htmlCode.Substring(0, 1500));
+                    Console.WriteLine($"\n... [Код обрізано. Загальна довжина: {htmlCode.Length} символів] ...");
+                }
+                else
+                {
+                    Console.WriteLine(htmlCode);
+                }
+                Console.WriteLine("===========================================\n");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Помилка завантаження HTML: {ex.Message}");
+            }
+        }
 
         public async Task RunXml()  // 
         {
@@ -71,7 +195,7 @@ namespace SharpKnP321.Networking
                 Method = HttpMethod.Get,
                 RequestUri = new Uri("https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json"),
             };
-            Task<HttpResponseMessage> responseTask = 
+            Task<HttpResponseMessage> responseTask =
                 client.SendAsync(request);
 
             Console.WriteLine("Курси валют НБУ, робота з JSON");
@@ -145,40 +269,33 @@ namespace SharpKnP321.Networking
 /* Робота мережею Інтернет
  * Мережа - сукупність вузлів та зв'язків між ними (каналів зв'язку)
  * Вузол (Node) - активний учасник, що перетворює дані (ПК, принтер, телефон, виконавчий пристрій тощо)
- *  вузол у мережі відрізняється адресою та/або іменем
+ * вузол у мережі відрізняється адресою та/або іменем
  * Зв'язок - спосіб передачі даних між вузлами (дріт, оптоволокно, радіоканал тощо)
  * НТТР - текстовий транспортий протокол
  * запит              відповідь
  * метод шлях         статус-код  фраза
  * заголовки - пари ключ: значення\r\n
  * тіло (довільна інформація), зокрема, JSON - текстовий протокол передачі даних
- * 
- * CONNECT  службові
+ * * CONNECT  службові
  * TRACE
- * 
- * HEAD     технологічні
+ * * HEAD     технологічні
  * OPTIONS
- * 
- *          загальні CRUD - Create Read Update Delete
+ * * загальні CRUD - Create Read Update Delete
  * GET     одержання даних (читання, Read) -- без модифікації системи (без змін)
  * POST    створення нових елементів (Create)
  * DELETE  
  * PUT     заміна наявних даних на передані
  * PATCH   оновлення частини наявних даних
- * 
- *          галузеві стандарти
+ * * галузеві стандарти
  * LINK
  * UNLINK
  * PURGE
  * MKCOL
- * 
- * 
- * JSON (JavaScript Object Notation)
+ * * * JSON (JavaScript Object Notation)
  * - primitive: number, "string\u10AF", null, true, false
  * - array: [JSON, JSON, ...]
  * - object: {"key1": JSON, "key2": JSON, ...}
- * 
- * XML:
+ * * XML:
  * <?xml version="1.0" encoding="utf-8"?>
  * <root>
        <currency>
@@ -191,8 +308,7 @@ namespace SharpKnP321.Networking
             </special>
       </currency>
  * </root>
- * 
- * <?xml version="1.0" encoding="utf-8"?>
+ * * <?xml version="1.0" encoding="utf-8"?>
  * <root exchangedate="20.02.2026">
         <currency r030="36" txt="Австралійський долар" rate="30.4814"/>
  * </root>
