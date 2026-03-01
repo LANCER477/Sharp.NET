@@ -1,4 +1,4 @@
-﻿
+﻿using SharpKnP321.Library;
 using SharpKnP321.AsyncProgramming;
 using SharpKnP321.Collect;
 using SharpKnP321.Data;
@@ -224,4 +224,12 @@ void Intro()
                             // ageInput[0] = 'A';  - не дозволено
                             // якщо потрібно змінювати рядок, то слід формувати новий
     ageInput = "A" + ageInput.Substring(1);
+
+    OtpService otpService = new OtpService();
+
+    Console.WriteLine("--- генератор OTP ---");
+    Console.WriteLine($"Тільки цифри : {otpService.Generate(6, OtpMode.Digits)}");
+    Console.WriteLine($"Тільки літери : {otpService.Generate(8, OtpMode.Letters)}");
+    Console.WriteLine($"Змішаний без О/0 : {otpService.Generate(10, OtpMode.Mixed)}");
+    
 }
