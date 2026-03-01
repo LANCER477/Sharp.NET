@@ -29,13 +29,21 @@ namespace SharpKnP321.Users
                 throw new ArgumentException("Довжина паролю має бути більшою за нуль", nameof(length));
             }
 
-            string characterSet = mode switch
+            string characterSet = "";
+            switch (mode)
             {
-                OtpMode.Digits => DigitsChars,
-                OtpMode.Letters => LettersChars,
-                OtpMode.Mixed => MixedChars,
-                _ => throw new ArgumentOutOfRangeException(nameof(mode), "Невідомий режим ОТР")
-            };
+                case OtpMode.Digits:
+                    characterSet = DigitsChars;
+                    break;
+                case OtpMode.Letters:
+                    characterSet = LettersChars;
+                    break;
+                case OtpMode.Mixed:
+                    characterSet = MixedChars;
+                    break;
+                default:
+                    throw new ArgumentException("Невідомий режим ОТР");
+            }
 
             char[] otp = new char[length];
             for (int i = 0; i < length; i++)
