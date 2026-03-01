@@ -24,8 +24,6 @@ namespace SharpKnP321.Networking
 
             MoonPhase tomorrowPhase = moonApi.PhaseByDateAsync(new DateOnly(2026, 2, 24)).Result;
             Console.WriteLine("{0} {1}", tomorrowPhase.PhaseName, tomorrowPhase.Lighting);
-
-
             Console.Write("Введіть дату (у форматі ДД.ММ.РРРР): ");
             string inputDate = Console.ReadLine();
 
